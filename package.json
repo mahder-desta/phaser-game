@@ -1,0 +1,29 @@
+{
+    "name": "phaser3-game",
+    "version": "1.0.0",
+    "description": "A Phaser 3 Game Rollup and TypeScript",
+    "main": "src/index.ts",
+    "scripts": {
+        "dev": "rollup --config rollup.config.dev.mjs",
+        "build": "rollup --config rollup.config.dist.mjs",
+        "watch": "rollup --watch --config rollup.config.dev.mjs"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/mahder-desta/phaser-game.git"
+    },
+    "author": "Mahder Desta",
+    "license": "MIT",
+    
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^24.0.1",
+        "@rollup/plugin-node-resolve": "^15.0.2",
+        "@rollup/plugin-replace": "^5.0.2",
+        "@rollup/plugin-terser": "^0.4.0",
+        "@rollup/plugin-typescript": "^11.1.0",
+        "phaser": "^3.60.0",
+        "rollup": "^3.20.2",
+        "rollup-plugin-serve": "^2.0.2",
+        "typescript": "^5.0.3"
+    }
+}
