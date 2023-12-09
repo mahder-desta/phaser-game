@@ -9,9 +9,11 @@ class MainScene extends Phaser.Scene {
 
   preload() {
     this.load.image("banana", "assets/banana.png");
+    this.load.image("background", "assets/bg.png");
   }
 
   create() {
+    this.add.image(0, 0, "background").setOrigin(0, 0);
     const blockWidth = 100; // Set the width of the blocks
     const blockHeight = 100; // Set the height of the blocks
     // Create draggable items
