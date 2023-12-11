@@ -14,8 +14,8 @@ class Rack extends Phaser.GameObjects.GameObject {
     this.sprite = scene.add
       .sprite(x, y, image)
       .setInteractive({ draggable: true });
-    this.sprite.displayHeight = 50;
-    this.sprite.displayWidth = 50;
+    this.sprite.displayHeight = 40;
+    this.sprite.displayWidth = 30;
     scene.panel.add(this.sprite);
 
     // Set up events for drag start and end
@@ -85,8 +85,8 @@ class Miner extends Phaser.GameObjects.GameObject {
     this.sprite = scene.add
       .sprite(x, y, image)
       .setInteractive({ draggable: true });
-    this.sprite.displayHeight = 40;
-    this.sprite.displayWidth = 80;
+    this.sprite.displayHeight = 30;
+    this.sprite.displayWidth = 70;
 
     scene.panel.add(this.sprite);
 
@@ -181,16 +181,16 @@ class MainScene extends Phaser.Scene {
     this.load.image("rack_4", "assets/rack_4.png");
 
     //miners
-    this.load.image("aurum", "assets/aurum.gif");
-    this.load.image("cp_106", "assets/cp_106.gif");
-    this.load.image("crypto_neko", "assets/crypto_neko.gif");
-    this.load.image("dj_roller", "assets/dj_roller.gif");
-    this.load.image("etherilliant", "assets/etherilliant.gif");
-    this.load.image("first_class", "assets/first_class.gif");
-    this.load.image("game_boy", "assets/game_boy.gif");
-    this.load.image("shifter", "assets/shifter.gif");
-    this.load.image("steamwheedle", "assets/steamwheedle.gif");
-    this.load.image("think_tronik", "assets/think_tronik.gif");
+    this.load.image("aurum", "assets/aurum.png");
+    this.load.image("cp_106", "assets/cp_106.png");
+    this.load.image("crypto_neko", "assets/crypto_neko.png");
+    this.load.image("dj_roller", "assets/dj_roller.png");
+    this.load.image("etherilliant", "assets/etherilliant.png");
+    this.load.image("first_class", "assets/first_class.png");
+    this.load.image("game_boy", "assets/game_boy.png");
+    this.load.image("shifter", "assets/shifter.png");
+    this.load.image("steamwheedle", "assets/steamwheedle.png");
+    this.load.image("think_tronik", "assets/think_tronik.png");
   }
 
   create() {
