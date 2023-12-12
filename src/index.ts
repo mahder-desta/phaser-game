@@ -4,13 +4,16 @@ class Rack extends Phaser.GameObjects.GameObject {
   sprite: Phaser.GameObjects.Sprite;
   initialPosition: Phaser.Math.Vector2;
   capacity: number;
-  currentMiners: number;
+  displayWidth: number;
+  displayHeight: number;
   miners: Miner[];
   constructor(scene: MainScene, x: number, y: number, image: string, capacity) {
     super(scene, "Rack");
     this.capacity = capacity;
-    this.currentMiners = 0;
+    this.displayWidth = 95;
+    this.displayHeight = capacity * 40;
     this.miners = [];
+    this.initialPosition = new Phaser.Math.Vector2(x, y);
     this.sprite = scene.add
       .sprite(x, y, image)
       .setInteractive({ draggable: true });
@@ -20,22 +23,20 @@ class Rack extends Phaser.GameObjects.GameObject {
 
     // Set up events for drag start and end
     this.sprite.on("dragstart", () => {
-      this.initialPosition = new Phaser.Math.Vector2(
-        this.sprite.x,
-        this.sprite.y
-      );
-
-      this.sprite.setScale(1.2);
+      this.sprite.displayWidth = this.displayWidth + 4;
+      this.sprite.displayHeight = this.displayHeight + 4;
     });
 
     this.sprite.on("dragend", () => {
       if (!this.isValidToDrop(scene)) {
-        this.sprite.setScale(0.5);
+        this.sprite.displayWidth = 30;
+        this.sprite.displayHeight = 40;
         // Return to initial position if not dropped on the drop zone
         this.sprite.x = this.initialPosition.x;
         this.sprite.y = this.initialPosition.y;
       } else {
-        this.sprite.setScale(1.3);
+        this.sprite.displayWidth = this.displayWidth;
+        this.sprite.displayHeight = this.displayHeight;
         scene.racks.push(this);
       }
     });
@@ -64,29 +65,59 @@ class Rack extends Phaser.GameObjects.GameObject {
     // Check if the rack overlap with the room drop zone
     const rackBounds = this.sprite.getBounds();
     const dropZoneBounds = scene.roomDropZone.getBounds();
-    return Phaser.Geom.Intersects.RectangleToRectangle(
-      rackBounds,
-      dropZoneBounds
-    );
+    const isContained =
+      Phaser.Geom.Rectangle.ContainsPoint(
+        dropZoneBounds,
+        new Phaser.Geom.Point(rackBounds.left, rackBounds.top)
+      ) &&
+      Phaser.Geom.Rectangle.ContainsPoint(
+        dropZoneBounds,
+        new Phaser.Geom.Point(rackBounds.right, rackBounds.top)
+      ) &&
+      Phaser.Geom.Rectangle.ContainsPoint(
+        dropZoneBounds,
+        new Phaser.Geom.Point(rackBounds.left, rackBounds.bottom)
+      ) &&
+      Phaser.Geom.Rectangle.ContainsPoint(
+        dropZoneBounds,
+        new Phaser.Geom.Point(rackBounds.right, rackBounds.bottom)
+      );
+
+    return isContained;
   }
 
   dropMiner(miner: Miner) {
-    if (this.miners.length < this.capacity) {
+    if (this.getNumberOfMines() < this.capacity) {
       this.miners.push(miner);
     }
+  }
+
+  getNumberOfMines() {
+    return this.miners.reduce((sum, miner) => sum + miner.capacity / 2, 0);
   }
 }
 
 class Miner extends Phaser.GameObjects.GameObject {
   sprite: Phaser.GameObjects.Sprite;
+  capacity: number;
+  initialPosition: Phaser.Math.Vector2;
 
-  constructor(scene: MainScene, x: number, y: number, image: string) {
+  constructor(
+    scene: MainScene,
+    x: number,
+    y: number,
+    image: string,
+    capacity: number
+  ) {
     super(scene, "Miner");
+    this.capacity = capacity;
+    this.initialPosition = new Phaser.Math.Vector2(x, y);
+
     this.sprite = scene.add
       .sprite(x, y, image)
       .setInteractive({ draggable: true });
-    this.sprite.displayHeight = 30;
-    this.sprite.displayWidth = 70;
+    this.sprite.displayHeight = 22;
+    this.sprite.displayWidth = 36 * this.capacity;
 
     scene.panel.add(this.sprite);
 
@@ -102,6 +133,25 @@ class Miner extends Phaser.GameObjects.GameObject {
     const droppedOnRack: Rack = scene.racks.find((rack: Rack) => {
       const minerBounds = this.sprite.getBounds();
       const rackBounds = rack.sprite.getBounds();
+
+      const isContained =
+        Phaser.Geom.Rectangle.ContainsPoint(
+          rackBounds,
+          new Phaser.Geom.Point(minerBounds.left, minerBounds.top)
+        ) &&
+        Phaser.Geom.Rectangle.ContainsPoint(
+          rackBounds,
+          new Phaser.Geom.Point(minerBounds.right, minerBounds.top)
+        ) &&
+        Phaser.Geom.Rectangle.ContainsPoint(
+          rackBounds,
+          new Phaser.Geom.Point(minerBounds.left, minerBounds.bottom)
+        ) &&
+        Phaser.Geom.Rectangle.ContainsPoint(
+          rackBounds,
+          new Phaser.Geom.Point(minerBounds.right, minerBounds.bottom)
+        );
+
       const overlappingMiner = rack.miners.find(
         (miner) =>
           miner !== this &&
@@ -110,10 +160,11 @@ class Miner extends Phaser.GameObjects.GameObject {
             minerBounds
           )
       );
+
       return (
-        Phaser.Geom.Intersects.RectangleToRectangle(minerBounds, rackBounds) &&
+        isContained &&
         !overlappingMiner &&
-        rack.miners.length < rack.capacity
+        rack.getNumberOfMines() < rack.capacity
       );
     });
 
@@ -121,8 +172,8 @@ class Miner extends Phaser.GameObjects.GameObject {
       droppedOnRack.dropMiner(this);
     } else {
       // Return to initial position if not dropped on a rack
-      this.sprite.x = this.sprite.input.dragStartX;
-      this.sprite.y = this.sprite.input.dragStartY;
+      this.sprite.x = this.initialPosition.x;
+      this.sprite.y = this.initialPosition.y;
     }
   }
 }
@@ -131,12 +182,17 @@ type RackType = {
   name: string;
   capacity: number;
 };
+
+type MinerType = {
+  name: string;
+  capacity: number;
+};
 class MainScene extends Phaser.Scene {
   public roomDropZone!: Phaser.GameObjects.Zone;
 
   panel: Phaser.GameObjects.Container;
   racksInStore: RackType[] = [];
-  minersInStore: string[] = [];
+  minersInStore: MinerType[] = [];
   racks: Rack[] = [];
   miners: Phaser.GameObjects.Image[];
 
@@ -160,13 +216,15 @@ class MainScene extends Phaser.Scene {
     ];
 
     this.minersInStore = [
-      "aurum",
-      "cp_106",
-      "crypto_neko",
-      "dj_roller",
-      "game_boy",
-      "shifter",
-      "think_tronik",
+      { name: "aurum", capacity: 2 },
+      { name: "cp_106", capacity: 1 },
+      { name: "cp_106", capacity: 1 },
+      { name: "cp_106", capacity: 1 },
+      { name: "crypto_neko", capacity: 2 },
+      { name: "dj_roller", capacity: 2 },
+      { name: "game_boy", capacity: 2 },
+      { name: "shifter", capacity: 2 },
+      { name: "think_tronik", capacity: 2 },
     ];
   }
 
@@ -197,13 +255,11 @@ class MainScene extends Phaser.Scene {
     var background = this.add.image(0, 0, "background").setOrigin(0, 0);
     var gameWidth = Number(this.sys.game.config.width);
     var gameHeight = Number(this.sys.game.config.height);
-    background.setScale(
-      gameWidth / background.width,
-      gameHeight / background.height
-    );
+    background.displayWidth = gameWidth;
+    background.displayHeight = gameHeight;
 
     // Add Avatar
-    var avatar = this.add.image(200, 424, "avatar");
+    var avatar = this.add.image(gameWidth * 0.2, gameHeight * 0.7, "avatar");
     avatar.setOrigin(0.5, 0.5);
     avatar.displayHeight = 55;
     avatar.displayWidth = 55;
@@ -222,7 +278,13 @@ class MainScene extends Phaser.Scene {
 
     //miners
     this.minersInStore.forEach((miner, i) => {
-      new Miner(this, 80 + this.racksInStore.length * 40 + i * 80, 30, miner);
+      new Miner(
+        this,
+        this.racksInStore.length * 40 + (i + 1) * 80,
+        30,
+        miner.name,
+        miner.capacity
+      );
     });
 
     this.setupDragInput();
@@ -257,10 +319,10 @@ class MainScene extends Phaser.Scene {
   }
 
   createRoomDropZone() {
-    const dropZoneX = this.gameWidth / 3;
+    const dropZoneX = this.gameWidth * 0.38;
 
     this.roomDropZone = this.add
-      .zone(dropZoneX, 0, this.gameWidth / 2, this.gameHeight - 60)
+      .zone(dropZoneX, 0, this.gameWidth * 0.62, this.gameHeight - 60)
       .setOrigin(0, 0);
     this.roomDropZone.setInteractive();
 
