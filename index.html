@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phaser Game with Layout</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      #container {
+        display: flex;
+        height: 100vh;
+      }
+
+      #nav {
+        width: 300px;
+        background-color: #161a30;
+        color: #b6bbc4;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      #room-container {
+        flex: 1;
+      }
+
+      .profile-card {
+        padding: 20px 16px;
+        border-radius: 6px;
+        background: #31304d;
+        border: 2px solid #55557a;
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .profile-card .header {
+        display: flex;
+        gap: 20px;
+      }
+      .header .avatar {
+        display: flex;
+        align-items: center;
+        flex-basis: 1/2;
+        justify-content: center;
+        background: #161a30;
+        padding: 8px 12px;
+      }
+      .avatar img {
+        height: 50px;
+        width: 50px;
+      }
+
+      .header .personal-info {
+        font-weight: bold;
+        font-size: 12px;
+      }
+      .detail-table {
+        display: flex;
+        flex-direction: column;
+        font-size: 12px;
+        padding-bottom: 16px;
+        padding-top: 16px;
+
+        border-top: 2px solid #55557a;
+        border-bottom: 2px solid #55557a;
+        font-weight: bold;
+      }
+
+      .detail-table .head {
+        display: flex;
+        align-items: center;
+        background: #161a30;
+        padding: 5px;
+      }
+
+      .detail-table .body {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+      }
+      .detail-table .body .data-item {
+        padding: 5px;
+        border: 1px solid #55557a;
+      }
+
+      .data-item:nth-child(even) {
+        text-align: right;
+      }
+
+      .detail-table .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #161a30;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="nav">
+        <!-- Your navigation content goes here -->
+        <h4>CHAPMAN TORRES</h4>
+        <div class="profile-card">
+          <div class="header">
+            <div class="avatar">
+              <img src="/assets/avatar.png" />
+            </div>
+            <div class="personal-info">
+              CHAPMAN <br />
+              TORRES <br />
+              MALE <br />
+              10 MONTH
+            </div>
+          </div>
+
+          <div class="detail-table">
+            <div class="head">CURRENT POWER</div>
+            <div class="body">
+              <div class="data-item">GAMES</div>
+              <div class="data-item">0 Gw/S</div>
+              <div class="data-item">MINERS</div>
+              <div class="data-item">9,239 Pw/S</div>
+              <div class="data-item">BONUS</div>
+              <div class="data-item">15,069 Pw/S</div>
+            </div>
+            <div class="footer">
+              <div>TOTAL</div>
+              <div>15.069 Pw/S</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="room-container"></div>
+    </div>
+
+    <script src="dist/index.js"></script>
+  </body>
+</html>
