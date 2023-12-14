@@ -1,5 +1,53 @@
 import * as Phaser from "phaser";
 
+import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin";
+
+var createMenu = function (scene, x, y, items, onClick) {
+
+  var menu = scene.rexUI.add.menu({
+    x: x,
+    y: y,
+    orientation: "y",
+
+    items: items,
+    createButtonCallback: function (item, i) {
+      return scene.rexUI.add.label({
+        background: scene.rexUI.add.roundRectangle(0, 0, 2, 2, 0, 0x4e342e),
+        text: scene.add.text(0, 0, item.name, {
+          fontSize: "20px",
+        }),
+        space: {
+          left: 10,
+          right: 10,
+          top: 10,
+          bottom: 10,
+          icon: 10,
+        },
+      });
+    },
+
+    easeIn: {
+      duration: 500,
+      orientation: "y",
+    },
+
+    easeOut: {
+      duration: 100,
+      orientation: "y",
+    },
+
+  });
+  menu.on('popup.complete', function () {
+    console.log('Menu displayed');
+  });
+  menu.on("button.click", function (button) {
+    onClick(button);
+  })
+
+  return menu;
+};
+
+
 class Rack extends Phaser.GameObjects.GameObject {
   sprite: Phaser.GameObjects.Sprite;
   initialPosition: Phaser.Math.Vector2;
@@ -7,19 +55,55 @@ class Rack extends Phaser.GameObjects.GameObject {
   displayWidth: number;
   displayHeight: number;
   miners: Miner[];
+  isUsed: boolean;
+  scene
   constructor(scene: MainScene, x: number, y: number, image: string, capacity) {
     super(scene, "Rack");
+    this.scene = scene;
     this.capacity = capacity;
     this.displayWidth = 95;
     this.displayHeight = capacity * 40;
     this.miners = [];
     this.initialPosition = new Phaser.Math.Vector2(x, y);
+    this.isUsed = false;
+    scene.add.existing(this);
+
     this.sprite = scene.add
       .sprite(x, y, image)
-      .setInteractive({ draggable: true });
+      .setInteractive();
     this.sprite.displayHeight = 40;
     this.sprite.displayWidth = 30;
+    scene.add.existing(this.sprite)
     scene.panel.add(this.sprite);
+
+
+    var menu = undefined;
+    var vm = this;
+    this.sprite.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.rightButtonDown()) {
+        if (!this.isUsed || this.miners.length > 0) return;
+
+        if (menu === undefined) {
+          menu = createMenu(
+            this.scene,
+            pointer.x,
+            pointer.y,
+            [{ name: "Return to Inventory", children: [] }],
+            function (button) {
+              menu.collapse();
+              vm.returnToInventory();
+            }
+          );
+          this.scene.add(menu);
+        }
+        else {
+          menu = undefined;
+        }
+      }
+      else {
+        menu = undefined;
+      }
+    });
 
     // Set up events for drag start and end
     this.sprite.on("dragstart", () => {
@@ -37,6 +121,8 @@ class Rack extends Phaser.GameObjects.GameObject {
       } else {
         this.sprite.displayWidth = this.displayWidth;
         this.sprite.displayHeight = this.displayHeight;
+        this.sprite.input.draggable = false;
+        this.isUsed = true;
         scene.racks.push(this);
       }
     });
@@ -64,7 +150,7 @@ class Rack extends Phaser.GameObjects.GameObject {
     }
     // Check if the rack overlap with the room drop zone
     const rackBounds = this.sprite.getBounds();
-    const dropZoneBounds = scene.roomDropZone.getBounds();
+    const dropZoneBounds = scene.dropAreaBounds;
     const isContained =
       Phaser.Geom.Rectangle.ContainsPoint(
         dropZoneBounds,
@@ -86,10 +172,26 @@ class Rack extends Phaser.GameObjects.GameObject {
     return isContained;
   }
 
+  private returnToInventory() {
+    if (this.miners.length > 0) return
+    this.scene.removeRack(this);
+  }
+
   dropMiner(miner: Miner) {
     if (this.getNumberOfMines() < this.capacity) {
       this.miners.push(miner);
     }
+  }
+
+  removeMiner(miner: Miner) {
+    this.miners = this.miners.filter(obj => obj != miner);
+    console.log(this.miners.length)
+
+    miner.sprite.x = miner.initialPosition.x;
+    miner.sprite.y = miner.initialPosition.y;
+    miner.sprite.input.draggable = true;
+    miner.isUsed = false;
+
   }
 
   getNumberOfMines() {
@@ -101,16 +203,20 @@ class Miner extends Phaser.GameObjects.GameObject {
   sprite: Phaser.GameObjects.Sprite;
   capacity: number;
   initialPosition: Phaser.Math.Vector2;
+  isUsed: boolean;
+  rack: Rack | undefined;
 
   constructor(
-    scene: MainScene,
+    scene,
     x: number,
     y: number,
     image: string,
     capacity: number
   ) {
     super(scene, "Miner");
+    // this.scene = scene
     this.capacity = capacity;
+    this.isUsed = false;
     this.initialPosition = new Phaser.Math.Vector2(x, y);
 
     this.sprite = scene.add
@@ -121,13 +227,45 @@ class Miner extends Phaser.GameObjects.GameObject {
 
     scene.panel.add(this.sprite);
 
+
+    var menu = undefined;
+    var vm = this;
+    this.sprite.on("pointerdown", function (pointer: Phaser.Input.Pointer) {
+
+      if (pointer.rightButtonDown()) {
+        if (!vm.isUsed) return;
+
+        if (menu === undefined) {
+          menu = createMenu(
+            this.scene,
+            pointer.x,
+            pointer.y,
+            [{ name: "Return to Inventory", children: [] }],
+            function (button) {
+              menu.collapse();
+              vm.returnToInventory();
+
+            }
+          );
+          this.scene.add(menu);
+        }
+        else {
+          menu = undefined;
+        }
+      }
+      else {
+        menu = undefined;
+      }
+    });
     this.sprite.on("dragend", () => {
       this.checkDrop(scene);
     });
 
     scene.input.setDraggable(this.sprite);
   }
-
+  private returnToInventory() {
+    this.rack.removeMiner(this)
+  }
   private checkDrop(scene: MainScene) {
     // Check if the miner is dropped on any rack in the drop zone
     const droppedOnRack: Rack = scene.racks.find((rack: Rack) => {
@@ -170,6 +308,11 @@ class Miner extends Phaser.GameObjects.GameObject {
 
     if (droppedOnRack) {
       droppedOnRack.dropMiner(this);
+      this.rack = droppedOnRack;
+      this.sprite.input.draggable = false;
+      this.isUsed = true;
+
+
     } else {
       // Return to initial position if not dropped on a rack
       this.sprite.x = this.initialPosition.x;
@@ -189,6 +332,7 @@ type MinerType = {
 };
 class MainScene extends Phaser.Scene {
   public roomDropZone!: Phaser.GameObjects.Zone;
+  public dropAreaBounds: Phaser.Geom.Rectangle;
 
   panel: Phaser.GameObjects.Container;
   racksInStore: RackType[] = [];
@@ -198,6 +342,7 @@ class MainScene extends Phaser.Scene {
 
   private gameWidth: number;
   private gameHeight: number;
+  rexUI: RexUIPlugin;
 
   constructor() {
     super({ key: "MainScene" });
@@ -232,6 +377,12 @@ class MainScene extends Phaser.Scene {
     this.gameWidth = this.sys.game.config.width as number;
     this.gameHeight = this.sys.game.config.height as number;
 
+    this.dropAreaBounds = new Phaser.Geom.Rectangle(
+      Number(this.sys.game.config.width) * 0.38,
+      0,
+      Number(this.sys.game.config.width) * 0.62,
+      Number(this.sys.game.config.height) - 60
+    );
     this.load.image("avatar", "assets/avatar.png");
     this.load.image("background", "assets/bg.png");
     //racks
@@ -249,9 +400,12 @@ class MainScene extends Phaser.Scene {
     this.load.image("shifter", "assets/shifter.png");
     this.load.image("steamwheedle", "assets/steamwheedle.png");
     this.load.image("think_tronik", "assets/think_tronik.png");
+
   }
 
   create() {
+    this.input.mouse.disableContextMenu();
+
     var background = this.add.image(0, 0, "background").setOrigin(0, 0);
     var gameWidth = Number(this.sys.game.config.width);
     var gameHeight = Number(this.sys.game.config.height);
@@ -288,8 +442,9 @@ class MainScene extends Phaser.Scene {
     });
 
     this.setupDragInput();
-    this.createRoomDropZone();
+
   }
+  update() { }
 
   setupDragInput() {
     this.input.on(
@@ -297,7 +452,7 @@ class MainScene extends Phaser.Scene {
       (
         pointer: Phaser.Input.Pointer,
         gameObject: Phaser.GameObjects.GameObject
-      ) => {}
+      ) => { }
     );
 
     this.input.on(
@@ -315,31 +470,28 @@ class MainScene extends Phaser.Scene {
       }
     );
 
-    this.input.on("dragend", () => {});
+    this.input.on(
+      "dragend",
+      (
+        pointer: Phaser.Input.Pointer,
+        gameObject: Phaser.GameObjects.GameObject
+      ) => {
+        console.log("Dropped object:", gameObject);
+        // gameObject.input.draggable = true;
+        console.log("dropped");
+      }
+    );
   }
 
-  createRoomDropZone() {
-    const dropZoneX = this.gameWidth * 0.38;
-
-    this.roomDropZone = this.add
-      .zone(dropZoneX, 0, this.gameWidth * 0.62, this.gameHeight - 60)
-      .setOrigin(0, 0);
-    this.roomDropZone.setInteractive();
-
-    this.input.on("gameobjectover", (pointer, gameObject) => {
-      if (gameObject === this.roomDropZone) {
-      }
-    });
-
-    this.input.on("gameobjectout", (pointer, gameObject) => {
-      if (gameObject === this.roomDropZone) {
-      }
-    });
-
-    this.input.on("drop", (pointer, gameObject) => {
-      if (gameObject === this.roomDropZone) {
-      }
-    });
+  removeRack(rack: Rack) {
+    this.racks = this.racks.filter(obj => obj != rack);
+    console.log(this.racks.length)
+    rack.sprite.displayWidth = 30;
+    rack.sprite.displayHeight = 40;
+    rack.sprite.x = rack.initialPosition.x;
+    rack.sprite.y = rack.initialPosition.y;
+    rack.sprite.input.draggable = true;
+    rack.isUsed = false;
   }
 }
 
@@ -348,10 +500,22 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth - 300,
   height: window.innerHeight,
   parent: "room-container",
+  dom: {
+    createContainer: true,
+  },
   scene: MainScene,
   scale: {
     mode: Phaser.Scale.ScaleModes.RESIZE,
     autoCenter: Phaser.Scale.Center.CENTER_BOTH,
+  },
+  plugins: {
+    scene: [
+      {
+        key: "rexUI",
+        plugin: RexUIPlugin,
+        mapping: "rexUI",
+      },
+    ],
   },
 };
 
